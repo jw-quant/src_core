@@ -16,8 +16,7 @@ def load_env():
             continue
         k, v = line.split("=", 1)
         k, v = k.strip(), v.strip()
-        # don't overwrite real environment vars
-        os.environ.setdefault(k, v)
+        os.environ[k] = v
 
 def getenv_required(key: str) -> str:
     val = os.getenv(key)

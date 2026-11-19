@@ -386,7 +386,8 @@ class PolygonClient:
         fetch_range for multiple tickers in one call (e.g. a daily update
         loop). `start` only matters for tickers with no CSV yet or that need
         backfilling — existing, fully-covered tickers just extend forward.
-        Returns: dict {TICKER: {"rows": int, "range": "start..end"} | {"error": str}}
+        Returns: dict {TICKER: {"mode": "init"|"update"|"noop"|"err",
+                                 "rows": int, "range": "start..end"}}
         """
         if not tickers:
             return {}
@@ -400,16 +401,19 @@ class PolygonClient:
 
         for t in tickers:
             try:
-                before = len(pd.read_csv(self._csv_path(t))) if self._csv_path(t).exists() else 0
+                existed_before = self._csv_path(t).exists()
+                before = len(pd.read_csv(self._csv_path(t))) if existed_before else 0
                 df = self.fetch_range(t, range_start, end_date)
-                results[t] = {"rows": len(df) - before, "range": f"{range_start}..{end_date}"}
+                added = len(df) - before
+                mode = "init" if not existed_before else ("noop" if added == 0 else "update")
+                results[t] = {"mode": mode, "rows": added, "range": f"{range_start}..{end_date}"}
 
             except httpx.HTTPStatusError as e:
                 print(f"[HTTP {e.response.status_code}] {t}: {e}")
-                results[t] = {"rows": 0, "range": "", "error": f"HTTP {e.response.status_code}"}
+                results[t] = {"mode": "err", "rows": 0, "range": "", "error": f"HTTP {e.response.status_code}"}
             except Exception as e:
                 print(f"[err] {t}: {e}")
-                results[t] = {"rows": 0, "range": "", "error": str(e)}
+                results[t] = {"mode": "err", "rows": 0, "range": "", "error": str(e)}
 
         return results
 

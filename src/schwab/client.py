@@ -131,14 +131,14 @@ def fetch_premarket_price(symbol: str) -> Optional[float]:
 
 
 def fetch_accounts() -> list[dict]:
-    """GET /trader/v1/accounts — all linked accounts with accountNumber and hashValue."""
+    """GET /trader/v1/accounts/accountNumbers — returns [{accountNumber, hashValue}, ...]."""
     try:
         token = get_access_token()
     except RuntimeError as exc:
         raise RuntimeError(f"[schwab] fetch_accounts: {exc}") from exc
     with httpx.Client(timeout=15) as client:
         resp = client.get(
-            f"{_TRADER_BASE}/accounts",
+            f"{_TRADER_BASE}/accounts/accountNumbers",
             headers={"Authorization": f"Bearer {token}"},
         )
         resp.raise_for_status()
